@@ -38,11 +38,21 @@ applyTheme((() => { try { return localStorage.getItem('sync-theme') || 'light'; 
 // =========================================================================
 // 2. WEBSOCKET
 // =========================================================================
+let everConnected = false;
 function connect() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(`${proto}://${location.host}`);
-  ws.onopen = () => { setConn(true, 'syncing'); startClock(); sendWS('join', { roomId, role, name: myName() }); };
-  ws.onclose = () => { setConn(false, 'offline'); stopClock(); };
+  // If the socket never opens within a few seconds, the backend isn't running
+  // (e.g. deployed to a static/serverless host like Vercel/Netlify).
+  const failTimer = setTimeout(() => {
+    if (ws.readyState !== 1 && !everConnected) {
+      try { ws.close(); } catch {}
+      showConnError();
+    }
+  }, 5000);
+  ws.onopen = () => { everConnected = true; clearTimeout(failTimer); setConn(true, 'syncing'); startClock(); sendWS('join', { roomId, role, name: myName() }); };
+  ws.onerror = () => { if (!everConnected) showConnError(); };
+  ws.onclose = () => { clearTimeout(failTimer); setConn(false, 'offline'); stopClock(); if (!everConnected) showConnError(); };
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     ({
@@ -448,7 +458,29 @@ $('qrBtn').onclick = () => {
 // =========================================================================
 $('hostBtn').onclick = () => { role = 'host'; enter(); };
 $('guestBtn').onclick = () => { role = 'guest'; enter(); };
-async function enter() { roomId = ($('roomInput').value || 'main').trim().toLowerCase(); await loadIceConfig(); connect(); }
+async function enter() { everConnected = false; roomId = ($('roomInput').value || 'main').trim().toLowerCase(); await loadIceConfig(); connect(); }
+
+// Shown when the WebSocket backend can't be reached (static/serverless host).
+let connErrShown = false;
+function showConnError() {
+  if (connErrShown) return; connErrShown = true;
+  setConn(false, 'no server');
+  const onVercelLike = /vercel\.app|netlify\.app|github\.io|pages\.dev/.test(location.host);
+  const box = document.createElement('div');
+  box.className = 'fixed inset-0 z-[70] modal-bg grid place-items-center p-6';
+  box.innerHTML = `<div class="glass rounded-3xl p-6 max-w-sm text-center">
+    <div class="text-3xl mb-2">🔌</div>
+    <h3 class="font-black text-lg">Can't reach the server</h3>
+    <p class="text-sm muted mt-2 leading-relaxed">
+      ${onVercelLike
+        ? 'This looks like a <b>static/serverless host</b> (Vercel/Netlify). It can serve the page but <b>cannot run the live server</b> (WebSockets), so Host/Join won&rsquo;t work here.'
+        : 'The backend isn&rsquo;t responding. Make sure <code>npm start</code> is running and you opened the right URL.'}
+    </p>
+    <p class="text-xs muted mt-3">Deploy on <b>Render / Railway / Fly.io</b> or run locally with <code>npm start</code>, then open that URL.</p>
+    <button class="btn-grad rounded-xl px-5 py-2 text-sm font-bold mt-4" onclick="this.closest('.fixed').remove();location.reload()">OK</button>
+  </div>`;
+  document.body.appendChild(box);
+}
 $('leaveBtn').onclick = () => location.reload();
 function onHostLeft() {
   for (const pc of peers.values()) pc.close(); peers.clear();
