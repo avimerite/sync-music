@@ -1,0 +1,19 @@
+{
+  "name": "sync-live",
+  "version": "2.0.0",
+  "description": "Premium live audio streaming: host shares PC/tab audio, guests listen in sync with chat, reactions and a latency dashboard.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}

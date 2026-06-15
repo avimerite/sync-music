@@ -1,0 +1,27 @@
+# Render Blueprint — deploy SYNC as a real Node web service (WebSockets work).
+# 1) Push this repo to GitHub.
+# 2) On render.com: New → Blueprint → pick this repo. Done.
+# 3) (Optional but needed for guests on OTHER networks) add TURN env vars below.
+services:
+  - type: web
+    name: sync-live
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /config
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # --- TURN (uncomment + fill, or set in the Render dashboard) ---
+      # Required only when host & guests are on DIFFERENT networks.
+      # Get free credentials from metered.ca / Twilio, or self-host coturn.
+      # - key: TURN_URL
+      #   value: turn:your.turn.host:3478
+      # - key: TURN_URL2
+      #   value: turns:your.turn.host:5349
+      # - key: TURN_USER
+      #   value: your-username
+      # - key: TURN_PASS
+      #   value: your-password

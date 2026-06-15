@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>SYNC — live audio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1/build/qrcode.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        colors: { accent: { DEFAULT: '#6366f1', 2: '#a855f7', 3: '#ec4899' } },
+        fontFamily: { sans: ['Inter','ui-sans-serif','system-ui','sans-serif'], display:['"Clash Display"','Inter','sans-serif'] },
+      } },
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *{-webkit-tap-highlight-color:transparent}
+    html{font-family:Inter,system-ui,sans-serif}
+    /* ---------- premium ambient backdrop ---------- */
+    body{position:relative;color:#1a1626;background:#f6f5fb;overflow-x:hidden}
+    body::before{content:"";position:fixed;inset:0;z-index:-2;
+      background:
+        radial-gradient(60vw 50vh at 12% -8%, rgba(99,102,241,.20), transparent 60%),
+        radial-gradient(55vw 45vh at 108% 8%, rgba(236,72,153,.16), transparent 55%),
+        radial-gradient(45vw 55vh at 50% 120%, rgba(168,85,247,.15), transparent 55%);}
+    .dark body{color:#ece9f5;background:#08070d}
+    .dark body::before{background:
+        radial-gradient(60vw 50vh at 12% -8%, rgba(99,102,241,.30), transparent 60%),
+        radial-gradient(55vw 45vh at 108% 8%, rgba(236,72,153,.22), transparent 55%),
+        radial-gradient(45vw 55vh at 50% 120%, rgba(168,85,247,.22), transparent 55%);}
+    body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+      background-image:radial-gradient(rgba(120,110,160,.10) 1px,transparent 1px);background-size:22px 22px;}
+    .dark body::after{background-image:radial-gradient(rgba(255,255,255,.05) 1px,transparent 1px)}
+    /* ---------- glass surfaces ---------- */
+    .glass{background:rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border:1px solid rgba(255,255,255,.6);box-shadow:0 10px 40px -16px rgba(80,60,140,.28),inset 0 1px 0 rgba(255,255,255,.7)}
+    .dark .glass{background:rgba(20,18,32,.62);border-color:rgba(255,255,255,.08);box-shadow:0 14px 50px -18px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06)}
+    .muted{color:#6b6680}.dark .muted{color:#9b95ad}
+    .hair{border-color:rgba(120,110,160,.18)}.dark .hair{border-color:rgba(255,255,255,.08)}
+    .field{background:rgba(255,255,255,.7);border:1px solid rgba(120,110,160,.22);color:inherit}
+    .dark .field{background:rgba(12,10,20,.6);border-color:rgba(255,255,255,.1)}
+    .field:focus{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.14);outline:none}
+    /* ---------- buttons ---------- */
+    .btn-grad{background:linear-gradient(120deg,#6366f1,#a855f7 50%,#ec4899);background-size:160% 160%;color:#fff;box-shadow:0 8px 24px -8px rgba(124,58,237,.55);transition:.28s}
+    .btn-grad:hover{background-position:100% 0;box-shadow:0 12px 30px -8px rgba(236,72,153,.6);transform:translateY(-1px)}
+    .btn-grad:active{transform:translateY(0)}
+    .btn-grad:disabled{opacity:.45;box-shadow:none;cursor:not-allowed;transform:none}
+    .btn-soft{background:rgba(120,110,160,.10);color:inherit}.btn-soft:hover{background:rgba(120,110,160,.18)}
+    .dark .btn-soft{background:rgba(255,255,255,.07)}.dark .btn-soft:hover{background:rgba(255,255,255,.12)}
+    .ring-live{box-shadow:0 0 0 1px rgba(236,72,153,.5),0 0 22px -2px rgba(236,72,153,.5)}
+    /* ---------- misc ---------- */
+    input[type=range]{-webkit-appearance:none;height:5px;border-radius:9px;background:rgba(120,110,160,.25)}
+    .dark input[type=range]{background:rgba(255,255,255,.14)}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:9px;background:#fff;border:2px solid #6366f1;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+    input[type=range]::-moz-range-thumb{width:15px;height:15px;border:2px solid #6366f1;border-radius:9px;background:#fff;cursor:pointer}
+    .dot{animation:dot 1.4s ease-in-out infinite}@keyframes dot{0%,100%{opacity:1}50%{opacity:.25}}
+    .fade{animation:f .4s cubic-bezier(.2,.7,.2,1) both}@keyframes f{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+    .grad-text{background:linear-gradient(120deg,#6366f1,#a855f7 50%,#ec4899);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .react{position:fixed;bottom:90px;z-index:60;font-size:2.1rem;pointer-events:none;animation:fly 2.4s ease-out forwards;filter:drop-shadow(0 4px 10px rgba(0,0,0,.25))}
+    @keyframes fly{0%{opacity:0;transform:translateY(0) scale(.5)}15%{opacity:1}100%{opacity:0;transform:translateY(-240px) scale(1.35)}}
+    .chat-scroll::-webkit-scrollbar{width:6px}.chat-scroll::-webkit-scrollbar-thumb{background:rgba(120,110,160,.35);border-radius:9px}
+    .qual{width:14px;height:14px;display:inline-flex;align-items:flex-end;gap:1.5px}
+    .qual i{width:3px;background:currentColor;border-radius:1px;opacity:.3}
+    .qual i.on{opacity:1}
+    .modal-bg{background:rgba(20,16,40,.45);backdrop-filter:blur(6px)}
+    .typing-dots span{animation:td 1s infinite}.typing-dots span:nth-child(2){animation-delay:.15s}.typing-dots span:nth-child(3){animation-delay:.3s}
+    @keyframes td{0%,60%,100%{opacity:.2}30%{opacity:1}}
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+  <div class="max-w-md mx-auto px-4 py-6 sm:py-9">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-7">
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-2xl btn-grad grid place-items-center text-white font-black text-lg">◉</div>
+        <div>
+          <h1 class="text-lg font-black tracking-tight leading-none grad-text">SYNC</h1>
+          <p class="text-[11px] muted mt-0.5 tracking-wide">low-latency live audio</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="text-xs px-2.5 py-1.5 rounded-full glass">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-zinc-400 mr-1.5 align-middle" id="connDot"></span>
+          <span id="connText" class="muted">offline</span>
+        </div>
+        <button id="themeBtn" class="w-9 h-9 rounded-xl glass grid place-items-center text-base" title="Toggle theme">◑</button>
+      </div>
+    </header>
+
+    <!-- ================= LOBBY ================= -->
+    <section id="lobby" class="fade">
+      <div class="glass rounded-3xl p-6 sm:p-7">
+        <h2 class="text-2xl font-black tracking-tight">Go <span class="grad-text">live</span> in seconds</h2>
+        <p class="text-sm muted mt-1">Same Wi-Fi · same room code · listen together.</p>
+        <div class="mt-5 space-y-3">
+          <div>
+            <label class="text-xs font-bold muted uppercase tracking-wide">Room code</label>
+            <input id="roomInput" value="main" class="field mt-1.5 w-full rounded-2xl px-4 py-3 transition font-medium" />
+          </div>
+          <div>
+            <label class="text-xs font-bold muted uppercase tracking-wide">Your name</label>
+            <input id="nameInput" placeholder="optional" class="field mt-1.5 w-full rounded-2xl px-4 py-3 transition" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5 mt-5">
+          <button id="hostBtn" class="btn-grad rounded-2xl py-3.5 px-3 font-bold text-sm">🎛️ Host</button>
+          <button id="guestBtn" class="btn-soft rounded-2xl py-3.5 px-3 font-bold text-sm">📱 Join</button>
+        </div>
+        <p class="text-[11px] muted mt-4 text-center">Hosting needs Chrome/Edge on desktop · open via <b>localhost</b></p>
+      </div>
+    </section>
+
+    <!-- ================= APP ================= -->
+    <section id="app" class="hidden space-y-4 fade">
+
+      <!-- Now playing -->
+      <div id="nowCard" class="glass rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <span id="roleTag" class="text-[11px] font-black px-2 py-0.5 rounded-md bg-accent/15 text-accent">GUEST</span>
+          <div class="flex items-center gap-2">
+            <span id="liveTag" class="hidden items-center gap-1.5 text-[11px] font-black text-accent-3"><span class="w-1.5 h-1.5 rounded-full bg-accent-3 dot"></span>LIVE</span>
+            <button id="qrBtn" class="text-xs muted hover:text-accent transition" title="Show QR to join">⊞ QR</button>
+            <span class="text-xs muted">room·<span id="roomTag" class="font-bold">main</span></span>
+          </div>
+        </div>
+
+        <!-- spectrum visualizer -->
+        <canvas id="viz" class="w-full h-16 mb-3 rounded-xl" style="display:block"></canvas>
+
+        <div class="flex items-center gap-3.5">
+          <div class="w-14 h-14 rounded-2xl btn-grad grid place-items-center shrink-0 text-2xl text-white">♫</div>
+          <div class="min-w-0 flex-1">
+            <h2 id="trackName" class="text-base font-black truncate">Not streaming</h2>
+            <p id="trackSub" class="text-xs muted mt-0.5">Waiting to begin</p>
+          </div>
+          <span id="listenCount" class="text-xs muted font-semibold whitespace-nowrap">0 live</span>
+        </div>
+
+        <!-- HOST controls -->
+        <div id="hostPanel" class="hidden mt-5 space-y-3">
+          <input id="titleInput" placeholder="Stream title (e.g. Friday Night Mix)" maxlength="80" class="field w-full rounded-xl px-3.5 py-2.5 text-sm" />
+          <div class="flex items-center gap-2">
+            <span class="text-xs muted font-semibold whitespace-nowrap">Quality</span>
+            <select id="qualSel" class="field rounded-xl px-2.5 py-2 text-xs flex-1">
+              <option value="128">High · 128k</option>
+              <option value="256" selected>Ultra · 256k stereo</option>
+              <option value="320">Max · 320k</option>
+            </select>
+          </div>
+          <button id="captureBtn" class="btn-grad w-full rounded-xl py-3 font-bold text-sm">Start sharing PC audio</button>
+          <div id="captureHelp" class="text-[11px] muted bg-black/[.03] dark:bg-white/[.04] rounded-xl p-2.5 leading-relaxed">
+            <b>YouTube:</b> pick the <b>Tab</b> + tick “Share tab audio”.<br>
+            <b>Spotify app:</b> pick <b>Entire screen</b> + tick “Share system audio”.
+          </div>
+          <button id="stopShareBtn" class="hidden btn-soft w-full rounded-xl py-2.5 text-sm font-semibold">Stop sharing</button>
+          <div id="micRow" class="hidden flex items-center justify-between rounded-xl border hair px-3.5 py-2.5">
+            <div><div class="text-sm font-bold">🎙️ Talk over music</div><div class="text-[11px] muted">Ducks music while you speak</div></div>
+            <button id="micBtn" class="btn-soft rounded-lg px-3 py-1.5 text-xs font-bold">Mic off</button>
+          </div>
+        </div>
+
+        <!-- GUEST listen -->
+        <div id="guestPanel" class="hidden mt-5">
+          <button id="listenBtn" class="btn-grad w-full rounded-xl py-3 font-bold text-sm">▶ Tap to listen</button>
+          <div class="flex items-center gap-2.5 mt-3">
+            <span class="text-xs muted font-semibold">Vol</span>
+            <input id="vol" type="range" min="0" max="1" step="0.01" value="1" class="flex-1" />
+          </div>
+          <p id="latencyLine" class="hidden text-[11px] muted mt-2.5 text-center font-mono"></p>
+        </div>
+      </div>
+
+      <!-- Reactions -->
+      <div class="glass rounded-3xl p-3 flex items-center justify-around">
+        <button class="reactBtn text-2xl active:scale-125 transition" data-e="🔥">🔥</button>
+        <button class="reactBtn text-2xl active:scale-125 transition" data-e="❤️">❤️</button>
+        <button class="reactBtn text-2xl active:scale-125 transition" data-e="👏">👏</button>
+        <button class="reactBtn text-2xl active:scale-125 transition" data-e="🎉">🎉</button>
+        <button class="reactBtn text-2xl active:scale-125 transition" data-e="😂">😂</button>
+        <button class="reactBtn text-2xl active:scale-125 transition" data-e="🙌">🙌</button>
+      </div>
+
+      <!-- Chat -->
+      <div class="glass rounded-3xl flex flex-col" style="height:300px">
+        <div class="px-4 py-3 border-b hair flex items-center justify-between">
+          <h3 class="text-sm font-black">Chat</h3>
+          <span id="chatHint" class="text-[11px] muted"></span>
+        </div>
+        <ul id="chatList" class="chat-scroll flex-1 overflow-y-auto px-4 py-3 space-y-2.5 text-sm"></ul>
+        <div id="typingRow" class="hidden px-4 pb-1 text-[11px] muted"><span id="typingText"></span> <span class="typing-dots"><span>•</span><span>•</span><span>•</span></span></div>
+        <div class="p-3 border-t hair flex gap-2">
+          <input id="chatInput" placeholder="Message…" maxlength="300" class="field flex-1 rounded-xl px-3.5 py-2.5 text-sm" />
+          <button id="chatSend" class="btn-grad rounded-xl px-4 text-sm font-bold">Send</button>
+        </div>
+      </div>
+
+      <!-- Listeners + analytics -->
+      <div class="glass rounded-3xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-black">Listeners <span id="peerCount" class="muted font-normal"></span></h3>
+          <div class="flex gap-3 text-[11px] muted font-mono">
+            <span>rtt <b id="rttVal" class="text-accent">—</b></span>
+            <span>off <b id="offsetVal" class="text-accent">—</b></span>
+          </div>
+        </div>
+        <ul id="peerList" class="space-y-1.5 text-sm"></ul>
+      </div>
+
+      <button id="leaveBtn" class="w-full text-sm muted hover:text-accent-3 transition py-2">Leave room</button>
+    </section>
+  </div>
+
+  <!-- QR modal -->
+  <div id="qrModal" class="hidden fixed inset-0 z-50 modal-bg grid place-items-center p-6" onclick="this.classList.add('hidden')">
+    <div class="glass rounded-3xl p-6 text-center" onclick="event.stopPropagation()">
+      <h3 class="font-black text-lg mb-1">Scan to join</h3>
+      <p class="text-xs muted mb-4">Same Wi-Fi · room <b id="qrRoom"></b></p>
+      <div id="qrBox" class="bg-white p-3 rounded-2xl inline-block"></div>
+      <p id="qrUrl" class="text-[11px] muted mt-3 font-mono break-all"></p>
+      <button class="btn-soft rounded-xl px-5 py-2 text-sm font-bold mt-4" onclick="document.getElementById('qrModal').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+
+  <audio id="liveAudio" autoplay playsinline class="hidden"></audio>
+  <script src="/app.js"></script>
+</body>
+</html>
